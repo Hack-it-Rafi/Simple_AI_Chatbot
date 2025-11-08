@@ -33,17 +33,39 @@ app.post("/api/chat", async (req, res) => {
       return res.status(500).json({ error: "API key not configured" });
     }
 
+    const session = sessionId || "default";
+    if (!conversationHistories.has(session)) {
+      conversationHistories.set(session, []);
+    }
+    const history = conversationHistories.get(session);
+
     const model = genAI.getGenerativeModel({
       model: "gemini-2.0-flash",
     });
 
-    const result = await model.generateContent(message);
+    const chat = model.startChat({
+      history: history,
+      generationConfig: {
+        maxOutputTokens: 1000,
+      },
+    });
+
+    const result = await chat.sendMessage(message);
     const response = await result.response;
     const text = response.text();
 
+    history.push(
+      { role: "user", parts: [{ text: message }] },
+      { role: "model", parts: [{ text: text }] }
+    );
+
+    if (history.length > 20) {
+      history.splice(0, history.length - 20);
+    }
+
     res.json({
       response: text,
-      sessionId: sessionId || "default",
+      sessionId: session,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
