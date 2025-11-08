@@ -114,7 +114,7 @@ API_Chatbot/
 The chatbot uses `gemini-1.5-flash-latest` by default. You can change this in `server.js`:
 
 ```javascript
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 ```
 
 ## 🎯 API Endpoints

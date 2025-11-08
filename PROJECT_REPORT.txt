@@ -1,0 +1,40 @@
+AI CHATBOT PROJECT - SUMMARY REPORT
+====================================
+
+Project: AI-Powered Chatbot with Google AI Studio
+Student: 
+BSSE-1308 [Arnab Das]
+BSSE-1319 [Labib Muntasir]
+BSSE-1323 [Imamul Hossain Rafi]
+
+OVERVIEW
+--------
+This project is a full-stack conversational AI chatbot that uses Google's Gemini AI model to provide context-aware responses to users.
+
+
+
+• Real-time chat interface with typing indicators and smooth animations
+• Context-aware conversations - the bot remembers what you said earlier
+• Beautiful purple gradient design that works on all devices
+• Rich text formatting with bold text, lists, and proper line breaks
+• Session management allowing multiple users simultaneously
+• Clear chat functionality to start fresh conversations
+• Secure API key management using environment variables
+
+
+- Backend: Node.js with Express.js
+- AI Model: Google Gemini 1.5 Flash
+- Frontend: HTML5, CSS3, Vanilla JavaScript
+- Key Dependencies: express, dotenv, @google/generative-ai, cors
+- Architecture: RESTful API with session-based state management
+- Security: Environment variables, .gitignore protection
+- Conversation History: Last 20 message pairs per session
+- Responsive: Mobile, tablet, and desktop compatible
+
+
+API Endpoints:
+- GET /api/health - Server status check
+- POST /api/chat - Send messages and get AI responses
+- POST /api/clear - Reset conversation history
+
+
