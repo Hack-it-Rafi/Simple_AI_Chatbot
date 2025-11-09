@@ -6,12 +6,15 @@ const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const clearBtn = document.getElementById("clearBtn");
 const statusDiv = document.getElementById("status");
+const modelSelect = document.getElementById("modelSelect");
 
+// Auto-resize textarea
 messageInput.addEventListener("input", function () {
   this.style.height = "auto";
-  this.style.height = Math.min(this.scrollHeight, 120) + "px";
+  this.style.height = Math.min(this.scrollHeight, 200) + "px";
 });
 
+// Send message on Enter (without Shift)
 messageInput.addEventListener("keydown", function (e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -20,8 +23,51 @@ messageInput.addEventListener("keydown", function (e) {
 });
 
 sendBtn.addEventListener("click", sendMessage);
-
 clearBtn.addEventListener("click", clearChat);
+
+// Load available models on page load
+window.addEventListener("load", loadModels);
+
+async function loadModels() {
+  try {
+    const response = await fetch("/api/models");
+    const data = await response.json();
+
+    if (response.ok && data.models && data.models.length > 0) {
+      // Clear existing options
+      modelSelect.innerHTML = "";
+
+      // Add models to select
+      data.models.forEach((model) => {
+        const option = document.createElement("option");
+        option.value = model.name;
+        option.textContent = model.name;
+        modelSelect.appendChild(option);
+      });
+
+      // Set default selection
+      if (data.models.some((m) => m.name === "llama3.2:latest")) {
+        modelSelect.value = "llama3.2:latest";
+      } else if (data.models.length > 0) {
+        modelSelect.value = data.models[0].name;
+      }
+    }
+  } catch (error) {
+    console.error("Error loading models:", error);
+    updateStatus("Could not load models", true);
+  }
+
+  // Check server health
+  try {
+    const response = await fetch("/api/health");
+    const data = await response.json();
+    if (data.status === "OK") {
+      updateStatus("Connected");
+    }
+  } catch (error) {
+    updateStatus("Warning: Could not connect to server", true);
+  }
+}
 
 function addMessage(text, isUser = false) {
   const welcomeMessage = chatContainer.querySelector(".welcome-message");
@@ -32,6 +78,12 @@ function addMessage(text, isUser = false) {
   const messageDiv = document.createElement("div");
   messageDiv.className = `message ${isUser ? "user" : "bot"}`;
 
+  // Create avatar
+  const avatarDiv = document.createElement("div");
+  avatarDiv.className = "message-avatar";
+  avatarDiv.textContent = isUser ? "👤" : "🤖";
+
+  // Create content
   const contentDiv = document.createElement("div");
   contentDiv.className = "message-content";
 
@@ -41,6 +93,7 @@ function addMessage(text, isUser = false) {
     contentDiv.innerHTML = formatBotMessage(text);
   }
 
+  messageDiv.appendChild(avatarDiv);
   messageDiv.appendChild(contentDiv);
   chatContainer.appendChild(messageDiv);
 
@@ -48,23 +101,35 @@ function addMessage(text, isUser = false) {
 }
 
 function formatBotMessage(text) {
+  // Escape HTML first
   let formatted = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
+  // Format markdown-style text
   formatted = formatted.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   formatted = formatted.replace(/__(.+?)__/g, "<strong>$1</strong>");
-
   formatted = formatted.replace(/\*(.+?)\*/g, "<em>$1</em>");
   formatted = formatted.replace(/_(.+?)_/g, "<em>$1</em>");
+  formatted = formatted.replace(/`([^`]+)`/g, "<code>$1</code>");
 
-  formatted = formatted.replace(/`(.+?)`/g, "<code>$1</code>");
+  // Handle code blocks
+  formatted = formatted.replace(/```([^`]+)```/g, "<pre><code>$1</code></pre>");
 
-  formatted = formatted.replace(/\n/g, "<br>");
+  // Convert line breaks to paragraphs
+  const paragraphs = formatted.split("\n\n");
+  if (paragraphs.length > 1) {
+    formatted = paragraphs
+      .filter((p) => p.trim())
+      .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
+      .join("");
+  } else {
+    formatted = `<p>${formatted.replace(/\n/g, "<br>")}</p>`;
+  }
 
+  // Handle lists (simple implementation)
   formatted = formatted.replace(/^[\*\-]\s+(.+)$/gm, "<li>$1</li>");
-
   formatted = formatted.replace(/(<li>.*<\/li>\s*)+/g, "<ul>$&</ul>");
 
   return formatted;
@@ -72,14 +137,21 @@ function formatBotMessage(text) {
 
 function showTypingIndicator() {
   const typingDiv = document.createElement("div");
-  typingDiv.className = "message bot";
+  typingDiv.className = "typing-indicator";
   typingDiv.id = "typing-indicator";
 
-  const indicatorDiv = document.createElement("div");
-  indicatorDiv.className = "typing-indicator";
-  indicatorDiv.innerHTML = "<span></span><span></span><span></span>";
+  // Create avatar
+  const avatarDiv = document.createElement("div");
+  avatarDiv.className = "message-avatar";
+  avatarDiv.textContent = "🤖";
 
-  typingDiv.appendChild(indicatorDiv);
+  // Create typing dots
+  const dotsDiv = document.createElement("div");
+  dotsDiv.className = "typing-dots";
+  dotsDiv.innerHTML = "<span></span><span></span><span></span>";
+
+  typingDiv.appendChild(avatarDiv);
+  typingDiv.appendChild(dotsDiv);
   chatContainer.appendChild(typingDiv);
 
   chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -92,9 +164,15 @@ function removeTypingIndicator() {
   }
 }
 
-function updateStatus(message, isError = false) {
+function updateStatus(message, isError = false, isSuccess = false) {
   statusDiv.textContent = message;
-  statusDiv.className = "status" + (isError ? " error" : "");
+  statusDiv.className = "status";
+
+  if (isError) {
+    statusDiv.className += " error";
+  } else if (isSuccess) {
+    statusDiv.className += " success";
+  }
 
   if (message) {
     setTimeout(() => {
@@ -130,6 +208,7 @@ async function sendMessage() {
       body: JSON.stringify({
         message: message,
         sessionId: sessionId,
+        model: modelSelect.value,
       }),
     });
 
@@ -139,6 +218,7 @@ async function sendMessage() {
 
     if (response.ok) {
       addMessage(data.response, false);
+      updateStatus(`Response from ${data.model}`, false, true);
     } else {
       addMessage(
         "Sorry, I encountered an error: " + (data.error || "Unknown error"),
@@ -154,7 +234,7 @@ async function sendMessage() {
       false
     );
     updateStatus(
-      "Connection error. Please check your internet connection.",
+      "Connection error. Please check if the server is running.",
       true
     );
   } finally {
@@ -182,27 +262,16 @@ async function clearChat() {
 
     if (response.ok) {
       chatContainer.innerHTML = `
-                <div class="welcome-message">
-                    <h2>Welcome! 👋</h2>
-                    <p>I'm your AI assistant. How can I help you today?</p>
-                </div>
-            `;
-      updateStatus("Chat history cleared");
+        <div class="welcome-message">
+          <div class="welcome-icon">🤖</div>
+          <h2>How can I help you today?</h2>
+          <p>I'm powered by your local Ollama models. Ask me anything!</p>
+        </div>
+      `;
+      updateStatus("Chat history cleared", false, true);
     }
   } catch (error) {
     console.error("Error clearing chat:", error);
     updateStatus("Failed to clear chat history", true);
   }
 }
-
-window.addEventListener("load", async () => {
-  try {
-    const response = await fetch("/api/health");
-    const data = await response.json();
-    if (data.status === "OK") {
-      updateStatus("Connected");
-    }
-  } catch (error) {
-    updateStatus("Warning: Could not connect to server", true);
-  }
-});

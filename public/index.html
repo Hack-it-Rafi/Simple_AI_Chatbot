@@ -3,42 +3,70 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Chatbot</title>
+    <title>Ollama Chat</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="container">
       <div class="chat-header">
-        <h1>🤖 AI Chatbot</h1>
-        <p>Powered by Google AI Studio</p>
-        <button id="clearBtn" class="clear-btn">Clear Chat</button>
+        <div class="header-content">
+          <h1>🤖 Ollama Chat</h1>
+          <div class="header-controls">
+            <select id="modelSelect" class="model-selector">
+              <option value="llama2">llama2</option>
+              <option value="llama3.2:latest" selected>llama3.2</option>
+              <option value="codellama">codellama</option>
+              <option value="mistral">mistral</option>
+            </select>
+            <button id="clearBtn" class="clear-btn">
+              <svg
+                width="16"
+                height="16"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"
+                />
+                <path
+                  fill-rule="evenodd"
+                  d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"
+                />
+              </svg>
+              Clear
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="chat-container" id="chatContainer">
         <div class="welcome-message">
-          <h2>Welcome! 👋</h2>
-          <p>I'm your AI assistant. How can I help you today?</p>
+          <div class="welcome-icon">🤖</div>
+          <h2>How can I help you today?</h2>
+          <p>I'm powered by your local Ollama models. Ask me anything!</p>
         </div>
       </div>
 
       <div class="input-container">
-        <textarea
-          id="messageInput"
-          placeholder="Type your message here..."
-          rows="1"
-        ></textarea>
-        <button id="sendBtn" class="send-btn">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-          </svg>
-        </button>
+        <div class="input-wrapper">
+          <textarea
+            id="messageInput"
+            placeholder="Message Ollama..."
+            rows="1"
+          ></textarea>
+          <button id="sendBtn" class="send-btn">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="status" id="status"></div>

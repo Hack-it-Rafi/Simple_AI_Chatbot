@@ -1,15 +1,53 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const os = require("os");
 const { Ollama } = require("ollama");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const ollama = new Ollama({ host: "http://localhost:11434" }); 
 
-app.use(cors());
+const ollama = new Ollama({ host: "http://localhost:11434" });
+
+app.use(
+  cors({
+    origin: "*", 
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cache-Control"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+
+// Function to get local IP address
+function getLocalIPAddress() {
+  const interfaces = os.networkInterfaces();
+
+  // Look for your specific IP first
+  for (const name of Object.keys(interfaces)) {
+    for (const interface of interfaces[name]) {
+      if (interface.family === "IPv4" && !interface.internal) {
+        // Check if this is your known IP address
+        if (interface.address === "10.100.202.121") {
+          return interface.address;
+        }
+      }
+    }
+  }
+
+  for (const name of Object.keys(interfaces)) {
+    for (const interface of interfaces[name]) {
+      if (interface.family === "IPv4" && !interface.internal) {
+        return interface.address;
+      }
+    }
+  }
+
+  // If auto-detection fails, return your known IP
+  return "10.100.202.121";
+}
 
 const conversationHistories = new Map();
 
@@ -214,14 +252,28 @@ app.post("/api/pull-model", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Ollama Local Server is running on http://localhost:${PORT}`);
-  console.log(`Make sure Ollama is running on http://localhost:11434`);
-  console.log(`Available endpoints:`);
+app.listen(PORT, "0.0.0.0", () => {
+  const localIP = getLocalIPAddress();
+  console.log("🚀 Ollama Network Server Started!");
+  console.log("=====================================");
+  console.log(`🏠 Local access: http://localhost:${PORT}`);
+  console.log(`🌐 Network access: http://${localIP}:${PORT}`);
+  console.log("=====================================");
+  console.log(`📡 Server is accessible from any device on your WiFi network`);
+  console.log(
+    `📱 Share this URL with other devices: http://${localIP}:${PORT}`
+  );
+  console.log(`🔧 Make sure Ollama is running on http://localhost:11434`);
+  console.log("=====================================");
+  console.log(`📋 Available endpoints:`);
   console.log(`  GET  /api/health - Health check`);
   console.log(`  GET  /api/models - List available models`);
   console.log(`  POST /api/chat - Chat with model`);
   console.log(`  POST /api/chat/stream - Stream chat responses`);
   console.log(`  POST /api/clear - Clear conversation history`);
   console.log(`  POST /api/pull-model - Download a new model`);
+  console.log("=====================================");
+  console.log(
+    `💡 Tip: Other users can access the chat at http://${localIP}:${PORT}`
+  );
 });
