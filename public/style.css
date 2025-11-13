@@ -237,6 +237,85 @@ body {
   text-decoration: underline;
 }
 
+/* Code file download section styles */
+.code-file-section {
+  background: #2d2e3f;
+  border: 1px solid #4d4d4f;
+  border-radius: 8px;
+  margin: 12px 0;
+  padding: 16px;
+  font-family: inherit;
+}
+
+.code-file-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #10a37f;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.code-file-icon {
+  font-size: 16px;
+}
+
+.code-file-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.code-file-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filename {
+  color: #ececf1;
+  font-weight: 500;
+  font-size: 14px;
+  font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+    "Courier New", monospace;
+}
+
+.file-meta {
+  color: #8e8ea0;
+  font-size: 12px;
+}
+
+.download-btn {
+  background: #10a37f;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.download-btn:hover {
+  background: #0d8a6e;
+  transform: translateY(-1px);
+}
+
+.download-btn:active {
+  transform: translateY(0);
+}
+
+.download-btn svg {
+  flex-shrink: 0;
+}
+
 .typing-indicator {
   display: flex;
   align-items: center;
@@ -446,5 +525,21 @@ body {
 
   .welcome-message p {
     font-size: 14px;
+  }
+
+  /* Mobile responsive code file section */
+  .code-file-info {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .download-btn {
+    justify-content: center;
+    padding: 10px 16px;
+  }
+
+  .code-file-section {
+    padding: 12px;
   }
 }

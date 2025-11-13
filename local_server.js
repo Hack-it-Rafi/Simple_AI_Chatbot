@@ -11,7 +11,7 @@ const ollama = new Ollama({ host: "http://localhost:11434" });
 
 app.use(
   cors({
-    origin: "*", 
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cache-Control"],
     credentials: true,
@@ -21,15 +21,12 @@ app.use(
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Function to get local IP address
 function getLocalIPAddress() {
   const interfaces = os.networkInterfaces();
 
-  // Look for your specific IP first
   for (const name of Object.keys(interfaces)) {
     for (const interface of interfaces[name]) {
       if (interface.family === "IPv4" && !interface.internal) {
-        // Check if this is your known IP address
         if (interface.address === "10.100.202.121") {
           return interface.address;
         }
@@ -45,14 +42,160 @@ function getLocalIPAddress() {
     }
   }
 
-  // If auto-detection fails, return your known IP
   return "10.100.202.121";
 }
 
 const conversationHistories = new Map();
 
+// Function to detect if user is asking for code generation
+function isCodeRequest(message) {
+  const codeKeywords = [
+    "write code",
+    "generate code",
+    "create a function",
+    "write a program",
+    "code for",
+    "implement",
+    "write script",
+    "create script",
+    "generate script",
+    "write a class",
+    "create a class",
+    "build a",
+    "develop a",
+    "code example",
+    "sample code",
+    "write algorithm",
+    "create algorithm",
+    "coding solution",
+  ];
+
+  const programmingLanguages = [
+    "javascript",
+    "python",
+    "java",
+    "c++",
+    "cpp",
+    "c#",
+    "csharp",
+    "html",
+    "css",
+    "php",
+    "ruby",
+    "go",
+    "rust",
+    "swift",
+    "kotlin",
+    "typescript",
+    "react",
+    "vue",
+    "angular",
+    "node",
+    "express",
+  ];
+
+  const lowerMessage = message.toLowerCase();
+
+  return (
+    codeKeywords.some((keyword) => lowerMessage.includes(keyword)) ||
+    programmingLanguages.some((lang) => lowerMessage.includes(lang))
+  );
+}
+
+// Function to extract code from AI response
+function extractCode(text) {
+  // Look for code blocks first
+  const codeBlockMatch = text.match(/```[\s\S]*?\n([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    return codeBlockMatch[1].trim();
+  }
+
+  // Look for code patterns
+  const codePatterns = [
+    /function\s+\w+\s*\([^)]*\)\s*{[\s\S]*?}/g,
+    /class\s+\w+\s*{[\s\S]*?}/g,
+    /<[^>]+>[\s\S]*?<\/[^>]+>/g, // HTML
+    /\w+\s*=\s*function\s*\([^)]*\)\s*{[\s\S]*?}/g,
+  ];
+
+  for (const pattern of codePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0];
+    }
+  }
+
+  return null;
+}
+
+// Function to determine file extension
+function getFileExtension(code, userMessage) {
+  const message = userMessage.toLowerCase();
+
+  if (
+    message.includes("javascript") ||
+    message.includes("js") ||
+    code.includes("function") ||
+    code.includes("const ") ||
+    code.includes("let ")
+  )
+    return ".js";
+  if (
+    message.includes("python") ||
+    message.includes("py") ||
+    code.includes("def ") ||
+    code.includes("import ")
+  )
+    return ".py";
+  if (
+    message.includes("html") ||
+    code.includes("<html") ||
+    code.includes("<!DOCTYPE")
+  )
+    return ".html";
+  if (
+    message.includes("css") ||
+    (code.includes("{") && code.includes(":") && code.includes(";"))
+  )
+    return ".css";
+  if (
+    (message.includes("java") && !message.includes("javascript")) ||
+    code.includes("public class")
+  )
+    return ".java";
+  if (
+    message.includes("c++") ||
+    message.includes("cpp") ||
+    code.includes("#include")
+  )
+    return ".cpp";
+  if (message.includes("c#") || message.includes("csharp")) return ".cs";
+  if (message.includes("php") || code.includes("<?php")) return ".php";
+  if (message.includes("typescript") || message.includes("ts")) return ".ts";
+  if (
+    message.includes("react") ||
+    code.includes("React.") ||
+    code.includes("jsx")
+  )
+    return ".jsx";
+
+  return ".txt"; // Default
+}
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK", message: "Ollama Local Server is running" });
+});
+
+// New endpoint to download generated code files
+app.get("/api/download/:sessionId/:filename", (req, res) => {
+  const { sessionId, filename } = req.params;
+  const filePath = path.join(__dirname, "generated_codes", sessionId, filename);
+
+  if (require("fs").existsSync(filePath)) {
+    res.download(filePath);
+  } else {
+    res.status(404).json({ error: "File not found" });
+  }
 });
 
 app.get("/api/models", async (req, res) => {
@@ -84,12 +227,20 @@ app.post("/api/chat", async (req, res) => {
 
     const history = conversationHistories.get(session);
 
+    // Check if this is a code generation request
+    const isCodeGenRequest = isCodeRequest(message);
+    let enhancedMessage = message;
+
+    if (isCodeGenRequest) {
+      enhancedMessage = `${message}\n\nPlease provide clean, properly indented code with appropriate formatting. Wrap the code in triple backticks. Just generate the code without additional explanations or anything other. Just the code`;
+    }
+
     let context = "";
     if (history.length > 0) {
       context = history.map((h) => `${h.role}: ${h.content}`).join("\n") + "\n";
     }
 
-    const fullPrompt = context + `Human: ${message}\nAssistant:`;
+    const fullPrompt = context + `Human: ${enhancedMessage}\nAssistant:`;
 
     const response = await ollama.generate({
       model: model,
@@ -103,6 +254,33 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const aiResponse = response.response;
+
+    // Handle code generation
+    let codeFile = null;
+    if (isCodeGenRequest) {
+      const extractedCode = extractCode(aiResponse);
+      if (extractedCode) {
+        const fs = require("fs");
+        const extension = getFileExtension(extractedCode, message);
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const filename = `generated_code_${timestamp}${extension}`;
+
+        // Create directory if it doesn't exist
+        const dirPath = path.join(__dirname, "generated_codes", session);
+        fs.mkdirSync(dirPath, { recursive: true });
+
+        // Write code to file
+        const filePath = path.join(dirPath, filename);
+        fs.writeFileSync(filePath, extractedCode, "utf8");
+
+        codeFile = {
+          filename: filename,
+          downloadUrl: `/api/download/${session}/${filename}`,
+          language: extension.substring(1),
+          size: Buffer.byteLength(extractedCode, "utf8"),
+        };
+      }
+    }
 
     history.push(
       { role: "Human", content: message },
@@ -118,6 +296,8 @@ app.post("/api/chat", async (req, res) => {
       sessionId: session,
       model: model,
       timestamp: new Date().toISOString(),
+      codeFile: codeFile,
+      isCodeResponse: isCodeGenRequest && codeFile !== null,
     });
   } catch (error) {
     console.error("Error in chat endpoint:", error);

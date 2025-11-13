@@ -22,6 +22,8 @@ messageInput.addEventListener("keydown", function (e) {
   }
 });
 
+console.log("Hello from script.js! Session ID:", sessionId);
+
 sendBtn.addEventListener("click", sendMessage);
 clearBtn.addEventListener("click", clearChat);
 
@@ -69,7 +71,7 @@ async function loadModels() {
   }
 }
 
-function addMessage(text, isUser = false) {
+function addMessage(text, isUser = false, codeFile = null) {
   const welcomeMessage = chatContainer.querySelector(".welcome-message");
   if (welcomeMessage) {
     welcomeMessage.remove();
@@ -91,6 +93,36 @@ function addMessage(text, isUser = false) {
     contentDiv.textContent = text;
   } else {
     contentDiv.innerHTML = formatBotMessage(text);
+
+    // Add code file download section if available
+    if (codeFile) {
+      const codeFileDiv = document.createElement("div");
+      codeFileDiv.className = "code-file-section";
+      codeFileDiv.innerHTML = `
+        <div class="code-file-header">
+          <span class="code-file-icon">📄</span>
+          <span class="code-file-title">Generated Code File</span>
+        </div>
+        <div class="code-file-info">
+          <div class="code-file-details">
+            <span class="filename">${codeFile.filename}</span>
+            <span class="file-meta">${codeFile.language.toUpperCase()} • ${formatFileSize(
+        codeFile.size
+      )}</span>
+          </div>
+          <button class="download-btn" onclick="downloadCodeFile('${
+            codeFile.downloadUrl
+          }', '${codeFile.filename}')">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+            </svg>
+            Download
+          </button>
+        </div>
+      `;
+      contentDiv.appendChild(codeFileDiv);
+    }
   }
 
   messageDiv.appendChild(avatarDiv);
@@ -99,6 +131,26 @@ function addMessage(text, isUser = false) {
 
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+
+// Helper function to format file size
+function formatFileSize(bytes) {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+// Function to download code file
+window.downloadCodeFile = function (downloadUrl, filename) {
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  updateStatus(`Downloaded ${filename}`, false, true);
+};
 
 function formatBotMessage(text) {
   // Escape HTML first
@@ -217,8 +269,17 @@ async function sendMessage() {
     removeTypingIndicator();
 
     if (response.ok) {
-      addMessage(data.response, false);
-      updateStatus(`Response from ${data.model}`, false, true);
+      addMessage(data.response, false, data.codeFile);
+
+      if (data.isCodeResponse && data.codeFile) {
+        updateStatus(
+          `Code generated and saved as ${data.codeFile.filename}`,
+          false,
+          true
+        );
+      } else {
+        updateStatus(`Response received`, false, true);
+      }
     } else {
       addMessage(
         "Sorry, I encountered an error: " + (data.error || "Unknown error"),
