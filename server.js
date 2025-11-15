@@ -197,7 +197,12 @@ app.get("/api/health", (req, res) => {
 // New endpoint to download generated code files
 app.get("/api/download/:sessionId/:filename", (req, res) => {
   const { sessionId, filename } = req.params;
-  const filePath = path.join(__dirname, "generated_codes", sessionId, filename);
+  const filePath = path.join(
+    __dirname,
+    "generated_code_files",
+    sessionId,
+    filename
+  );
 
   if (require("fs").existsSync(filePath)) {
     res.download(filePath);
@@ -258,7 +263,7 @@ app.post("/api/chat", async (req, res) => {
         const filename = `generated_code_${timestamp}${extension}`;
 
         // Create directory if it doesn't exist
-        const dirPath = path.join(__dirname, "generated_codes", session);
+        const dirPath = path.join(__dirname, "generated_code_files", session);
         fs.mkdirSync(dirPath, { recursive: true });
 
         // Write code to file

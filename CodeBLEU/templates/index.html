@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeBLEU Calculator</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .content {
+        padding: 40px;
+      }
+
+      .upload-section {
+        margin-bottom: 30px;
+      }
+
+      .file-upload-group {
+        margin-bottom: 25px;
+      }
+
+      .file-upload-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .file-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px dashed #ddd;
+        border-radius: 8px;
+        background: #fafafa;
+        transition: all 0.3s ease;
+      }
+
+      .file-input:hover {
+        border-color: #667eea;
+        background: #f0f2ff;
+      }
+
+      .checkbox-group {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .checkbox-group input[type="checkbox"] {
+        margin-right: 8px;
+        transform: scale(1.2);
+      }
+
+      .checkbox-group label {
+        font-weight: 500;
+        color: #555;
+      }
+
+      .submit-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .submit-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .result {
+        display: none;
+        margin-top: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #28a745;
+      }
+
+      .error {
+        display: none;
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8d7da;
+        color: #721c24;
+        border-radius: 8px;
+        border-left: 4px solid #dc3545;
+      }
+
+      .score-display {
+        font-size: 2em;
+        font-weight: bold;
+        color: #667eea;
+        text-align: center;
+        margin: 15px 0;
+      }
+
+      .details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .detail-item {
+        background: white;
+        padding: 10px;
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .detail-label {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 5px;
+      }
+
+      .detail-value {
+        font-weight: bold;
+        color: #333;
+      }
+
+      .info-box {
+        margin-top: 30px;
+        padding: 20px;
+        background: #e3f2fd;
+        border-radius: 8px;
+        border-left: 4px solid #2196f3;
+      }
+
+      .info-box h3 {
+        color: #1565c0;
+        margin-bottom: 10px;
+      }
+
+      .info-box p {
+        color: #424242;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>CodeBLEU Calculator</h1>
+        <p>
+          Upload reference and predicted code files to calculate CodeBLEU
+          similarity score
+        </p>
+      </div>
+
+      <div class="content">
+        <form id="uploadForm" enctype="multipart/form-data">
+          <div class="upload-section">
+            <div class="file-upload-group">
+              <label for="reference_file">Reference Code File:</label>
+              <input
+                type="file"
+                id="reference_file"
+                name="reference_file"
+                class="file-input"
+                accept=".txt,.py,.java,.cpp,.c,.js,.ts,.go,.rb,.php,.cs,.swift,.kt,.scala,.rs"
+                required
+              />
+            </div>
+
+            <div class="file-upload-group">
+              <label for="predicted_file">Predicted Code File:</label>
+              <input
+                type="file"
+                id="predicted_file"
+                name="predicted_file"
+                class="file-input"
+                accept=".txt,.py,.java,.cpp,.c,.js,.ts,.go,.rb,.php,.cs,.swift,.kt,.scala,.rs"
+                required
+              />
+            </div>
+
+            <div class="checkbox-group">
+              <input
+                type="checkbox"
+                id="use_custom_tokenizer"
+                name="use_custom_tokenizer"
+              />
+              <label for="use_custom_tokenizer"
+                >Use Custom Tokenizer (removes comments, better token
+                splitting)</label
+              >
+            </div>
+
+            <button type="submit" class="submit-btn">
+              Calculate CodeBLEU Score
+            </button>
+          </div>
+        </form>
+
+        <div class="loading" id="loading">
+          <div class="loading-spinner"></div>
+          <p>Calculating CodeBLEU score...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="result" id="result">
+          <h3>CodeBLEU Score Result</h3>
+          <div class="score-display" id="score"></div>
+          <div class="details" id="details"></div>
+        </div>
+
+        <div class="info-box">
+          <h3>About CodeBLEU</h3>
+          <p>
+            CodeBLEU is a metric for evaluating code generation models. It
+            extends BLEU by considering syntactic and semantic similarities in
+            addition to n-gram matches. The score ranges from 0 to 1, where
+            higher values indicate greater similarity between the reference and
+            predicted code.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("uploadForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const formData = new FormData();
+          const referenceFile =
+            document.getElementById("reference_file").files[0];
+          const predictedFile =
+            document.getElementById("predicted_file").files[0];
+          const useCustomTokenizer = document.getElementById(
+            "use_custom_tokenizer"
+          ).checked;
+
+          if (!referenceFile || !predictedFile) {
+            showError("Please select both reference and predicted files.");
+            return;
+          }
+
+          formData.append("reference_file", referenceFile);
+          formData.append("predicted_file", predictedFile);
+          formData.append("use_custom_tokenizer", useCustomTokenizer);
+
+          showLoading(true);
+          hideError();
+          hideResult();
+
+          try {
+            const response = await fetch("/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              showResult(data);
+            } else {
+              showError(
+                data.error ||
+                  "An error occurred while calculating CodeBLEU score."
+              );
+            }
+          } catch (error) {
+            showError("Network error: " + error.message);
+          } finally {
+            showLoading(false);
+          }
+        });
+
+      function showLoading(show) {
+        document.getElementById("loading").style.display = show
+          ? "block"
+          : "none";
+        document.querySelector(".submit-btn").disabled = show;
+      }
+
+      function showError(message) {
+        const errorDiv = document.getElementById("error");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+      }
+
+      function hideError() {
+        document.getElementById("error").style.display = "none";
+      }
+
+      function showResult(data) {
+        const resultDiv = document.getElementById("result");
+        const scoreDiv = document.getElementById("score");
+        const detailsDiv = document.getElementById("details");
+
+        scoreDiv.textContent = data.codebleu_score.toFixed(4);
+
+        // Create detailed scores display
+        let detailedScoresHtml = "";
+        if (data.detailed_scores && typeof data.detailed_scores === "object") {
+          for (const [key, value] of Object.entries(data.detailed_scores)) {
+            if (typeof value === "number") {
+              detailedScoresHtml += `
+                            <div class="detail-item">
+                                <div class="detail-label">${key.toUpperCase()}</div>
+                                <div class="detail-value">${value.toFixed(
+                                  4
+                                )}</div>
+                            </div>
+                        `;
+            }
+          }
+        }
+
+        detailsDiv.innerHTML = `
+                <div class="detail-item">
+                    <div class="detail-label">Reference Length</div>
+                    <div class="detail-value">${data.reference_length} chars</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Predicted Length</div>
+                    <div class="detail-value">${data.predicted_length} chars</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Tokenizer Used</div>
+                    <div class="detail-value">${data.tokenizer_used}</div>
+                </div>
+                ${detailedScoresHtml}
+            `;
+
+        resultDiv.style.display = "block";
+      }
+
+      function hideResult() {
+        document.getElementById("result").style.display = "none";
+      }
+
+      // File drag and drop functionality
+      ["reference_file", "predicted_file"].forEach((id) => {
+        const fileInput = document.getElementById(id);
+
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+          fileInput.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ["dragenter", "dragover"].forEach((eventName) => {
+          fileInput.addEventListener(eventName, highlight, false);
+        });
+
+        ["dragleave", "drop"].forEach((eventName) => {
+          fileInput.addEventListener(eventName, unhighlight, false);
+        });
+
+        fileInput.addEventListener("drop", handleDrop, false);
+      });
+
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      function highlight(e) {
+        e.target.style.borderColor = "#667eea";
+        e.target.style.background = "#f0f2ff";
+      }
+
+      function unhighlight(e) {
+        e.target.style.borderColor = "#ddd";
+        e.target.style.background = "#fafafa";
+      }
+
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        e.target.files = files;
+      }
+    </script>
+  </body>
+</html>

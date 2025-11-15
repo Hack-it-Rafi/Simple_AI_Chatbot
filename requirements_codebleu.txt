@@ -1,0 +1,11 @@
+# CodeBLEU Evaluator Requirements
+# Core dependencies for the CodeBLEU implementation
+
+# Required for API integration with the chatbot server
+requests>=2.28.0
+
+# Optional dependencies for enhanced functionality
+# tree-sitter>=0.20.0  # Uncomment for advanced AST parsing support
+# numpy>=1.21.0        # Uncomment for numerical computations if needed
+# matplotlib>=3.5.0    # Uncomment for plotting evaluation results
+# pandas>=1.4.0        # Uncomment for dataset analysis features
